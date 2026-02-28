@@ -1,0 +1,189 @@
+TIBIA SERVER 7.4 - COMPLETE PROJECT CONTENTS
+==============================================
+
+PROJECT STRUCTURE:
+==================
+
+tibia-server/
+├── README.md                          - Main project overview
+├── PROJECT_SUMMARY.md                 - Comprehensive project summary
+├── LICENSE                            - MIT License
+├── .gitignore                         - Git ignore rules
+│
+├── config/                            - Configuration files
+│   ├── config.lua                     - Main server configuration
+│   ├── tibia74.lua                    - Tibia 7.4 specific settings
+│   └── security.lua                   - Security configurations
+│
+├── docker/                            - Docker configuration
+│   ├── Dockerfile.tfs                 - TFS server container
+│   ├── Dockerfile.mysql               - MySQL database container
+│   ├── docker-compose.yml             - Container orchestration
+│   └── mysql.cnf                      - MySQL optimization
+│
+├── scripts/                           - Deployment and maintenance
+│   ├── deploy-production.sh           - Full production deployment
+│   ├── init-database.sh               - Database initialization
+│   └── backup-and-maintain.sh         - Backups and maintenance
+│
+├── docs/                              - Documentation
+│   ├── QUICKSTART.md                  - 5-minute setup guide
+│   ├── DEPLOYMENT_GUIDE.md            - Detailed deployment instructions
+│   └── CONFIG_REFERENCE.md            - Configuration reference
+│
+├── src/                               - Source code
+│   └── tfs/                           - The Forgotten Server (TFS) 1.5
+│       ├── src/                       - C++ source code
+│       ├── server/                    - Game data and scripts
+│       ├── cmake/                     - Build configuration
+│       ├── config.lua                 - Default configuration
+│       ├── schema.sql                 - Database schema
+│       ├── CMakeLists.txt             - CMake build file
+│       ├── README.md                  - TFS documentation
+│       └── LICENSE                    - TFS license (GPL v2)
+│
+├── data/                              - Game data (created at runtime)
+├── logs/                              - Server logs (created at runtime)
+└── backups/                           - Database backups (created at runtime)
+
+
+KEY FILES DESCRIPTION:
+======================
+
+CONFIGURATION:
+- config.lua: Main server settings (rates, ports, world type, etc.)
+- tibia74.lua: Tibia 7.4 specific gameplay mechanics
+- security.lua: Account, IP, chat, and anti-cheat settings
+
+DOCKER:
+- docker-compose.yml: Orchestrates TFS, MySQL, and Adminer containers
+- Dockerfile.tfs: Multi-stage build for TFS compilation
+- Dockerfile.mysql: MySQL 8.0 with Tibia schema
+- mysql.cnf: MySQL performance optimization
+
+SCRIPTS:
+- deploy-production.sh: One-command production deployment
+- init-database.sh: Initialize MySQL database with schema
+- backup-and-maintain.sh: Backup, cleanup, and maintenance tasks
+
+DOCUMENTATION:
+- QUICKSTART.md: Get running in 5 minutes
+- DEPLOYMENT_GUIDE.md: Detailed step-by-step deployment
+- CONFIG_REFERENCE.md: Complete configuration options reference
+- PROJECT_SUMMARY.md: Project overview and features
+
+
+QUICK START:
+============
+
+1. Clone repository:
+   git clone <url> tibia-server
+   cd tibia-server
+
+2. Build and start:
+   docker-compose build
+   docker-compose up -d
+
+3. Initialize database:
+   ./scripts/init-database.sh
+
+4. Verify:
+   docker-compose ps
+
+5. Connect:
+   Use Tibia 7.4 client to connect to localhost:7171
+   Test account: testaccount / testpassword
+
+
+PRODUCTION DEPLOYMENT:
+======================
+
+Run the automated deployment script:
+./scripts/deploy-production.sh
+
+This will:
+- Build Docker images
+- Start all services
+- Initialize database
+- Configure firewall
+- Set up monitoring
+- Generate deployment report
+
+
+FEATURES:
+=========
+
+SERVER:
+✓ Tibia 7.4 authentic gameplay
+✓ Four vocations (Sorcerer, Druid, Paladin, Knight)
+✓ PvP system with skulls
+✓ Experience and skill system
+✓ Magic spells with requirements
+✓ Creatures and monsters
+✓ Houses and trading
+✓ Configurable rates
+
+DEPLOYMENT:
+✓ Docker containerization
+✓ Automated deployment
+✓ Database management (Adminer)
+✓ Backup and restore
+✓ Firewall configuration
+✓ Monitoring and health checks
+✓ SSL/TLS ready
+
+SECURITY:
+✓ Account security
+✓ IP controls
+✓ Chat filtering
+✓ Anti-cheat measures
+✓ Logging and audit
+✓ GDPR compliance
+
+
+PORTS:
+======
+
+7171 - Tibia Login Server
+7172 - Tibia Game Server
+8080 - Adminer (Database Management)
+3306 - MySQL (Internal only)
+
+
+REQUIREMENTS:
+=============
+
+OS: Ubuntu 20.04 LTS or later
+CPU: 2+ cores (4+ recommended)
+RAM: 4GB minimum (8GB+ recommended)
+Storage: 20GB minimum (SSD recommended)
+Docker: Latest version
+Docker Compose: 1.29+
+
+
+SUPPORT:
+========
+
+Documentation: See docs/ directory
+Community: https://otland.net/
+Issues: GitHub issue tracker
+Logs: docker-compose logs -f
+
+
+LICENSE:
+========
+
+This project: MIT License
+The Forgotten Server: GNU General Public License v2.0
+MySQL: GNU General Public License v2.0
+
+
+VERSION:
+========
+
+Project Version: 1.0.0
+Tibia Version: 7.4
+TFS Version: 1.5
+Created: February 2026
+Status: Production Ready
+

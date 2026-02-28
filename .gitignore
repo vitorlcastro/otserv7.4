@@ -1,0 +1,80 @@
+# Tibia Server .gitignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Docker
+docker-compose.override.yml
+.dockerignore
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Backups
+backups/
+*.sql
+*.sql.gz
+*.tar.gz
+
+# Data files
+data/
+*.db
+*.sqlite
+
+# IDE and Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Build artifacts
+build/
+dist/
+*.o
+*.a
+*.so
+*.dylib
+*.exe
+
+# Dependencies
+node_modules/
+vendor/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS files
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Git
+.git/
+.gitattributes
+
+# Docker volumes
+mysql_data/
+tfs_logs/
+
+# Cache
+.cache/
+*.cache
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+env/
+venv/

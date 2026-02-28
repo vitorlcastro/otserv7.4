@@ -1,0 +1,17 @@
+# MySQL 8.0 with Tibia schema
+FROM mysql:8.0
+
+# Set environment
+ENV MYSQL_ROOT_PASSWORD=tibia_root_password
+ENV MYSQL_DATABASE=tibia
+ENV MYSQL_USER=tibia
+ENV MYSQL_PASSWORD=tibia_password
+
+# Copy initialization script
+COPY src/tfs/schema.sql /docker-entrypoint-initdb.d/01-schema.sql
+
+# Copy custom MySQL configuration
+COPY docker/mysql.cnf /etc/mysql/conf.d/tibia.cnf
+
+# Expose port
+EXPOSE 3306

@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # MySQL Database Service
+  mysql:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.mysql
+    container_name: tibia-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: tibia_root_password
+      MYSQL_DATABASE: tibia
+      MYSQL_USER: tibia
+      MYSQL_PASSWORD: tibia_password
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ../src/tfs/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    ports:
+      - "3306:3306"
+    networks:
+      - tibia-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "tibia", "-ptibia_password"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # The Forgotten Server
+  tfs:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.tfs
+    container_name: tibia-server
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      TFS_MYSQL_HOST: mysql
+      TFS_MYSQL_USER: tibia
+      TFS_MYSQL_PASSWORD: tibia_password
+      TFS_MYSQL_DATABASE: tibia
+      TFS_MYSQL_PORT: 3306
+    volumes:
+      - ../config/config.lua:/app/config.lua:ro
+      - ../data:/app/data
+      - ../src/tfs/server:/app/server:ro
+      - tfs_logs:/app/logs
+    ports:
+      - "7171:7171"
+      - "7172:7172"
+    networks:
+      - tibia-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7171/", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Adminer for database management
+  adminer:
+    image: adminer:latest
+    container_name: tibia-adminer
+    depends_on:
+      - mysql
+    ports:
+      - "8080:8080"
+    networks:
+      - tibia-network
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+
+volumes:
+  mysql_data:
+    driver: local
+  tfs_logs:
+    driver: local
+
+networks:
+  tibia-network:
+    driver: bridge

@@ -1,0 +1,47 @@
+# MySQL Configuration for Tibia Server
+# Optimized for game server performance
+
+[mysqld]
+# Connection settings
+max_connections = 200
+max_allowed_packet = 256M
+thread_stack = 192K
+thread_cache_size = 8
+
+# InnoDB settings for better performance
+default-storage-engine = InnoDB
+innodb_buffer_pool_size = 1G
+innodb_log_file_size = 256M
+innodb_flush_log_at_trx_commit = 2
+innodb_flush_method = O_DIRECT
+
+# Query optimization
+query_cache_type = 1
+query_cache_size = 64M
+query_cache_limit = 2M
+
+# Logging (disable in production for performance)
+# general_log = 1
+# general_log_file = /var/log/mysql/general.log
+slow_query_log = 1
+slow_query_log_file = /var/log/mysql/slow.log
+long_query_time = 2
+
+# Character set
+character_set_server = utf8mb4
+collation_server = utf8mb4_unicode_ci
+
+# Replication settings (if needed)
+server-id = 1
+log_bin = mysql-bin
+binlog_format = ROW
+
+# Performance schema
+performance_schema = ON
+performance_schema_max_table_instances = 12500
+
+# Skip external locking
+skip-external-locking
+
+# Bind address
+bind-address = 0.0.0.0

@@ -1,109 +1,176 @@
-# Open Tibia Server - Tibia 7.4 Edition
+# Tibia 7.4 Open Server
 
-![Tibia 7.4](https://static.tibia.com/images/global/header/tibia-logo-artwork.png)
+A production-ready Tibia 7.4 server powered by [The Forgotten Server (TFS) 1.5](https://github.com/mattyx14/theforgottenserver-7.4), fully containerised with Docker and MySQL. Clone, run one command, and play.
 
-This project provides a production-ready open Tibia server that emulates the classic Tibia 7.4 experience. It is built upon **The Forgotten Server (TFS)** and containerized with **Docker** for easy deployment and management. This setup is designed for performance, security, and scalability, making it suitable for hosting a public server for you and your friends.
+---
 
-## Features
+## Requirements
 
-- **Tibia 7.4 Gameplay**: Authentic mechanics, including spells, items, creatures, and map data from the classic 7.4 era.
-- **The Forgotten Server (TFS) 1.5**: A stable and feature-rich server emulator written in C++.
-- **Dockerized Environment**: The entire stack (TFS, MySQL) is containerized for portability and simplified deployment.
-- **Production-Ready**: Includes scripts for deployment, backups, maintenance, and security hardening.
-- **MySQL Database**: A robust and high-performance database for storing all server data.
-- **Public Accessibility**: Configured for public access with port forwarding and firewall setup instructions.
-- **Comprehensive Documentation**: Detailed guides for deployment, configuration, and management.
+| Tool | Minimum Version | Install |
+|---|---|---|
+| **Docker** | 20.x | https://docs.docker.com/get-docker/ |
+| **Docker Compose** | v2 (plugin) or v1 | https://docs.docker.com/compose/install/ |
+| **Git** | any | https://git-scm.com/ |
 
-## Prerequisites
+No other dependencies are needed. The server compiles and runs entirely inside Docker.
 
-Before you begin, ensure you have the following software installed on your host machine:
+---
 
-- **Docker**: [Get Docker](https://docs.docker.com/get-docker/)
-- **Docker Compose**: [Install Docker Compose](https://docs.docker.com/compose/install/)
-- **Git**: [Install Git](https://git-scm.com/book/en/v2/Getting-Started-Installing-Git)
-
-## Getting Started
-
-Follow these steps to get your Tibia server up and running:
-
-### 1. Clone the Repository
+## Quick Start
 
 ```bash
-git clone <repository-url> tibia-server
-cd tibia-server
+# 1. Clone the repository
+git clone https://github.com/vitorlcastro/otserv7.4.git
+cd otserv7.4
+
+# 2. Start everything (builds images, starts containers, seeds the database)
+./start.sh
 ```
 
-### 2. Run the Deployment Script
+That is it. The first run takes a few minutes to compile TFS from source. Subsequent starts are instant.
 
-This script will build the Docker images, start the services, initialize the database, and configure the firewall.
+---
+
+## Connecting with a Client
+
+Download **OTClient v4.0** (free, open-source, cross-platform):
+
+> https://github.com/opentibiabr/otclient/releases/tag/4.0
+
+Open OTClient → **Options → Game** → set Protocol to **7.4** → connect to `localhost:7171`.
+
+**Test credentials:**
+
+| Field | Value |
+|---|---|
+| Username | `testaccount` |
+| Password | `testpassword` |
+| Character | `TestPlayer` |
+
+---
+
+## Playing with Friends (Public Server)
+
+1. Find your public IP: `curl ifconfig.me`
+2. On your router, forward **TCP ports 7171 and 7172** to your machine.
+3. Share your public IP with friends.
+4. Friends open OTClient, set protocol 7.4, and connect to your IP.
+
+---
+
+## Server Management
+
+All commands are run from the repo root:
 
 ```bash
-./scripts/deploy-production.sh
+./start.sh              # First-time setup OR start if stopped
+./start.sh start        # Start containers
+./start.sh stop         # Stop containers
+./start.sh restart      # Restart containers
+./start.sh logs         # Tail live server logs
+./start.sh status       # Show container status
+./start.sh backup       # Create a database backup
+./start.sh reset        # Wipe all data and volumes (DESTRUCTIVE)
 ```
 
-### 3. Configure Port Forwarding
-
-To make your server accessible to the public, you need to configure port forwarding on your router. Forward the following TCP ports to the local IP address of your host machine:
-
-- **7171**: Login Server
-- **7172**: Game Server
-- **8080**: Adminer (optional, for database management)
-
-### 4. Update DNS Records
-
-If you have a domain name, update your DNS records to point to your public IP address.
-
-### 5. Connect to the Server
-
-Your server is now live! You and your friends can connect using a Tibia 7.4 client. The server address is your public IP or domain name.
+---
 
 ## Configuration
 
-The server can be configured through the following files:
+All settings live in the `.env` file at the repo root. Edit it before the first run, or restart after changes:
 
-- **/config/config.lua**: Main server configuration (rates, connection settings, etc.).
-- **/config/tibia74.lua**: Tibia 7.4 specific gameplay settings.
-- **/config/security.lua**: Security-related settings.
-- **/docker/docker-compose.yml**: Docker container orchestration.
+```dotenv
+# Rates
+RATE_EXP=5
+RATE_SKILL=3
+RATE_LOOT=2
+RATE_MAGIC=3
 
-## Management
+# World
+WORLD_TYPE=pvp          # pvp | no-pvp | pvp-enforced
+SERVER_NAME=Tibia 7.4
+MOTD=Welcome to Tibia 7.4!
 
-### Backups and Maintenance
-
-The `backup-and-maintain.sh` script performs regular backups, cleanup, and maintenance tasks. You can run it manually or schedule it as a cron job.
-
-```bash
-./scripts/backup-and-maintain.sh
+# Database credentials
+MYSQL_ROOT_PASSWORD=tibia_root_password
+MYSQL_PASSWORD=tibia_password
 ```
 
-### Database Management
+See `docs/CONFIG_REFERENCE.md` for the full list of options.
 
-You can manage the MySQL database using **Adminer**, a web-based database management tool. Access it at `http://<your-server-ip>:8080`.
+---
 
-- **Server**: `mysql`
-- **Username**: `tibia`
-- **Password**: `tibia_password`
-- **Database**: `tibia`
+## Database Manager
 
-## Security
+Adminer (web-based database UI) is available at:
 
-This project includes several security features to protect your server:
+> http://localhost:8080
 
-- **Firewall Configuration**: The deployment script sets up firewall rules to restrict access to necessary ports.
-- **Security Hardening**: The `security.lua` file provides a range of security settings for account, IP, chat, and trade restrictions.
-- **Regular Backups**: The maintenance script ensures your data is backed up regularly.
-- **Containerization**: Docker provides an isolated environment for the server, reducing the risk of system-wide compromises.
+| Field | Value |
+|---|---|
+| Server | `mysql` |
+| Username | `tibia` |
+| Password | `tibia_password` |
+| Database | `tibia` |
+
+---
+
+## Project Structure
+
+```
+otserv7.4/
+├── start.sh                  ← single entry point
+├── docker-compose.yml        ← container orchestration (run from here)
+├── .env                      ← all configurable settings
+│
+├── docker/
+│   ├── Dockerfile.tfs        ← compiles TFS from source
+│   ├── entrypoint.sh         ← generates config.lua at runtime
+│   └── mysql.cnf             ← MySQL tuning
+│
+├── scripts/
+│   ├── init-database.sh      ← seeds test account/character
+│   └── backup-and-maintain.sh
+│
+├── src/tfs/                  ← The Forgotten Server source
+│   ├── src/                  ← C++ source code
+│   ├── server/               ← game data (map, monsters, spells)
+│   └── schema.sql            ← database schema
+│
+└── docs/                     ← detailed guides
+    ├── QUICKSTART.md
+    ├── DEPLOYMENT_GUIDE.md
+    ├── CONFIG_REFERENCE.md
+    └── CLIENT_SETUP_GUIDE.md
+```
+
+---
 
 ## Troubleshooting
 
-- **Connection Issues**: Ensure that your ports are correctly forwarded and that your firewall is not blocking the connection.
-- **Server Not Starting**: Check the Docker logs for errors: `docker-compose logs -f tfs`.
-- **Database Issues**: Verify that the MySQL container is running and healthy: `docker-compose ps`.
+**Server won't start**
+```bash
+./start.sh logs          # view TFS output
+docker compose logs mysql  # view MySQL output
+```
 
-## Contributing
+**Can't connect from client**
+- Verify the server is running: `./start.sh status`
+- Ensure OTClient protocol is set to **7.4**
+- Check that no firewall is blocking port 7171
 
-Contributions are welcome! Please feel free to submit a pull request or open an issue.
+**Database error on first run**
+```bash
+./start.sh stop
+./start.sh reset         # wipes volumes
+./start.sh               # fresh start
+```
+
+---
 
 ## License
 
-This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for details.
+- **This project**: MIT License
+- **The Forgotten Server**: GNU GPL v2.0
+- **MySQL**: GNU GPL v2.0
+- **OTClient**: MIT License

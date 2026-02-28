@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+
+  # ─── MySQL Database ───────────────────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: tibia-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-tibia_root_password}
+      MYSQL_DATABASE:      ${MYSQL_DATABASE:-tibia}
+      MYSQL_USER:          ${MYSQL_USER:-tibia}
+      MYSQL_PASSWORD:      ${MYSQL_PASSWORD:-tibia_password}
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./src/tfs/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./docker/mysql.cnf:/etc/mysql/conf.d/tibia.cnf:ro
+    ports:
+      - "3306:3306"
+    networks:
+      - tibia-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost",
+             "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-tibia_root_password}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ─── The Forgotten Server ─────────────────────────────────────────────────────
+  tfs:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.tfs
+    container_name: tibia-server
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      TFS_MYSQL_HOST:     mysql
+      TFS_MYSQL_USER:     ${MYSQL_USER:-tibia}
+      TFS_MYSQL_PASSWORD: ${MYSQL_PASSWORD:-tibia_password}
+      TFS_MYSQL_DATABASE: ${MYSQL_DATABASE:-tibia}
+      TFS_MYSQL_PORT:     3306
+    volumes:
+      - ./src/tfs/server:/app/server
+      - tfs_logs:/app/logs
+    ports:
+      - "7171:7171"
+      - "7172:7172"
+    networks:
+      - tibia-network
+    restart: unless-stopped
+
+  # ─── Adminer (web DB manager) ─────────────────────────────────────────────────
+  adminer:
+    image: adminer:latest
+    container_name: tibia-adminer
+    depends_on:
+      - mysql
+    ports:
+      - "8080:8080"
+    networks:
+      - tibia-network
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: mysql
+
+volumes:
+  mysql_data:
+  tfs_logs:
+
+networks:
+  tibia-network:
+    driver: bridge

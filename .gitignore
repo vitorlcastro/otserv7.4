@@ -1,7 +1,7 @@
 # Tibia Server .gitignore
 
-# Environment files
-.env
+# .env is committed as a safe template (no real secrets)
+# Use .env.local to override locally without committing
 .env.local
 .env.*.local
 

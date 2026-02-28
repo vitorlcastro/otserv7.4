@@ -1,11 +1,8 @@
-# Multi-stage build for The Forgotten Server 7.4
-FROM ubuntu:22.04 as builder
+# ─── Stage 1: Build ───────────────────────────────────────────────────────────
+FROM ubuntu:22.04 AS builder
 
-# Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
-ENV CMAKE_BUILD_TYPE=Release
 
-# Install build dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     cmake \
@@ -14,26 +11,25 @@ RUN apt-get update && apt-get install -y \
     libboost-all-dev \
     libssl-dev \
     zlib1g-dev \
+    liblua5.2-dev \
+    libpugixml-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy source code
+# Copy TFS source (build context is the repo root)
 COPY src/tfs /build/tfs
 WORKDIR /build/tfs
 
-# Create build directory and compile
-RUN mkdir -p build && \
-    cd build && \
-    cmake .. -DCMAKE_BUILD_TYPE=Release && \
-    make -j$(nproc)
+# Compile
+RUN mkdir -p build && cd build \
+    && cmake .. -DCMAKE_BUILD_TYPE=Release \
+    && make -j$(nproc)
 
-# Runtime stage
+# ─── Stage 2: Runtime ─────────────────────────────────────────────────────────
 FROM ubuntu:22.04
 
-# Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     libmysqlclient21 \
     libboost-system1.74.0 \
@@ -42,36 +38,28 @@ RUN apt-get update && apt-get install -y \
     libboost-regex1.74.0 \
     libssl3 \
     zlib1g \
+    liblua5.2-0 \
+    libpugixml1v5 \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Create app user
+# Non-root user
 RUN useradd -m -u 1000 tibia
 
-# Copy compiled binary from builder
-COPY --from=builder /build/tfs/build/theforgottenserver /app/theforgottenserver
-
-# Copy configuration and data
-COPY config/config.lua /app/config.lua
-COPY src/tfs/server /app/server
-COPY src/tfs/schema.sql /app/schema.sql
-
-# Set working directory
 WORKDIR /app
 
-# Create necessary directories
-RUN mkdir -p /app/data /app/logs && \
-    chown -R tibia:tibia /app
+# Copy compiled binary
+COPY --from=builder /build/tfs/build/theforgottenserver /app/theforgottenserver
 
-# Switch to non-root user
+# Copy game data (server directory is mounted as volume at runtime)
+# config.lua is generated at startup via entrypoint
+COPY docker/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh \
+    && mkdir -p /app/logs \
+    && chown -R tibia:tibia /app
+
 USER tibia
 
-# Expose ports
 EXPOSE 7171 7172
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:7171/ || exit 1
-
-# Run the server
-CMD ["./theforgottenserver"]
+ENTRYPOINT ["/app/entrypoint.sh"]

@@ -1,85 +1,83 @@
 #!/bin/bash
-
-# Tibia Server Database Initialization Script
-# This script initializes the MySQL database with the Tibia 7.4 schema
-
+# ─────────────────────────────────────────────────────────────────────────────
+# init-database.sh
+# Seeds the Tibia database with a test account and character.
+# Must be run from the repo root AFTER docker-compose up -d.
+# No local mysql client required — runs entirely inside the container.
+# ─────────────────────────────────────────────────────────────────────────────
 set -e
 
-# Configuration
-MYSQL_HOST="${MYSQL_HOST:-localhost}"
-MYSQL_PORT="${MYSQL_PORT:-3306}"
-MYSQL_USER="${MYSQL_USER:-tibia}"
-MYSQL_PASSWORD="${MYSQL_PASSWORD:-tibia_password}"
-MYSQL_DATABASE="${MYSQL_DATABASE:-tibia}"
-MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-tibia_root_password}"
+# Load .env if present
+if [ -f ".env" ]; then
+    export $(grep -v '^#' .env | xargs)
+fi
 
-# Colors for output
-RED='\033[0;31m'
+ROOT_PASS="${MYSQL_ROOT_PASSWORD:-tibia_root_password}"
+DB="${MYSQL_DATABASE:-tibia}"
+
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+RED='\033[0;31m'
+NC='\033[0m'
 
-echo -e "${YELLOW}Starting Tibia Server Database Initialization...${NC}"
+info()    { echo -e "${YELLOW}[init-db]${NC} $1"; }
+success() { echo -e "${GREEN}[init-db]${NC} $1"; }
+error()   { echo -e "${RED}[init-db]${NC} $1"; exit 1; }
 
-# Wait for MySQL to be ready
-echo -e "${YELLOW}Waiting for MySQL to be ready...${NC}"
-for i in {1..30}; do
-    if mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u root -p"$MYSQL_ROOT_PASSWORD" -e "SELECT 1" &> /dev/null; then
-        echo -e "${GREEN}MySQL is ready!${NC}"
+# ── Wait for MySQL to be healthy ──────────────────────────────────────────────
+info "Waiting for MySQL to be ready..."
+for i in $(seq 1 40); do
+    if docker-compose exec -T mysql mysqladmin ping -h localhost \
+        -u root -p"${ROOT_PASS}" --silent 2>/dev/null; then
+        success "MySQL is ready."
         break
     fi
-    echo "Attempt $i/30 - MySQL not ready yet, waiting..."
-    sleep 2
+    echo "  Attempt $i/40 — waiting 3 s..."
+    sleep 3
+    if [ "$i" -eq 40 ]; then
+        error "MySQL did not become ready in time. Run: docker-compose logs mysql"
+    fi
 done
 
-# Check if database exists
-echo -e "${YELLOW}Checking if database exists...${NC}"
-if mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u root -p"$MYSQL_ROOT_PASSWORD" -e "USE $MYSQL_DATABASE" 2>/dev/null; then
-    echo -e "${GREEN}Database $MYSQL_DATABASE already exists${NC}"
-else
-    echo -e "${YELLOW}Creating database $MYSQL_DATABASE...${NC}"
-    mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u root -p"$MYSQL_ROOT_PASSWORD" -e "CREATE DATABASE IF NOT EXISTS $MYSQL_DATABASE;"
-    echo -e "${GREEN}Database created successfully${NC}"
-fi
+# ── Run seed SQL inside the container ────────────────────────────────────────
+info "Seeding database with test account and character..."
 
-# Import schema
-echo -e "${YELLOW}Importing schema...${NC}"
-if [ -f "src/tfs/schema.sql" ]; then
-    mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" < src/tfs/schema.sql
-    echo -e "${GREEN}Schema imported successfully${NC}"
-else
-    echo -e "${RED}schema.sql not found!${NC}"
-    exit 1
-fi
+docker-compose exec -T mysql mysql -u root -p"${ROOT_PASS}" "${DB}" << 'SQL'
 
-# Create test account
-echo -e "${YELLOW}Creating test account...${NC}"
-mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" << EOF
-INSERT INTO accounts (name, password, type, premdays, email, creation) 
-VALUES ('testaccount', SHA1('testpassword'), 1, 0, 'test@tibia.local', UNIX_TIMESTAMP())
-ON DUPLICATE KEY UPDATE password=SHA1('testpassword');
-EOF
-echo -e "${GREEN}Test account created (username: testaccount, password: testpassword)${NC}"
+-- Test account (username: testaccount / password: testpassword)
+INSERT INTO accounts (name, password, type, premdays, email, creation)
+VALUES ('testaccount', SHA1('testpassword'), 1, 0, 'test@localhost', UNIX_TIMESTAMP())
+ON DUPLICATE KEY UPDATE password = SHA1('testpassword');
 
-# Create test player
-echo -e "${YELLOW}Creating test player...${NC}"
-mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u root -p"$MYSQL_ROOT_PASSWORD" "$MYSQL_DATABASE" << EOF
-INSERT INTO players (name, group_id, account_id, level, vocation, health, healthmax, experience, looktype, town_id, posx, posy, posz, cap, sex, skill_fist, skill_club, skill_sword, skill_axe, skill_dist, skill_shielding, skill_fishing)
-VALUES ('TestPlayer', 1, 1, 1, 1, 150, 150, 0, 136, 1, 32369, 32241, 7, 400, 0, 10, 10, 10, 10, 10, 10, 10)
-ON DUPLICATE KEY UPDATE level=1;
-EOF
-echo -e "${GREEN}Test player created (character: TestPlayer)${NC}"
+-- Test character
+SET @acc_id = (SELECT id FROM accounts WHERE name = 'testaccount' LIMIT 1);
 
-# Set proper permissions
-echo -e "${YELLOW}Setting database permissions...${NC}"
-mysql -h "$MYSQL_HOST" -P "$MYSQL_PORT" -u root -p"$MYSQL_ROOT_PASSWORD" << EOF
-GRANT ALL PRIVILEGES ON $MYSQL_DATABASE.* TO '$MYSQL_USER'@'%' IDENTIFIED BY '$MYSQL_PASSWORD';
-FLUSH PRIVILEGES;
-EOF
-echo -e "${GREEN}Permissions set successfully${NC}"
+INSERT INTO players
+    (name, group_id, account_id, level, vocation,
+     health, healthmax, experience,
+     looktype, town_id,
+     posx, posy, posz,
+     cap, sex,
+     skill_fist, skill_club, skill_sword, skill_axe,
+     skill_dist, skill_shielding, skill_fishing)
+VALUES
+    ('TestPlayer', 1, @acc_id, 1, 1,
+     150, 150, 0,
+     136, 1,
+     32369, 32241, 7,
+     400, 0,
+     10, 10, 10, 10, 10, 10, 10)
+ON DUPLICATE KEY UPDATE level = 1;
 
-echo -e "${GREEN}Database initialization completed successfully!${NC}"
-echo -e "${YELLOW}Test Account Details:${NC}"
-echo "  Username: testaccount"
-echo "  Password: testpassword"
-echo "  Character: TestPlayer"
+SQL
+
+success "Database seeded successfully!"
+echo ""
+echo "  ┌─────────────────────────────────────────┐"
+echo "  │  Test Account                           │"
+echo "  │  Username  : testaccount               │"
+echo "  │  Password  : testpassword              │"
+echo "  │  Character : TestPlayer                │"
+echo "  └─────────────────────────────────────────┘"
+echo ""
+success "Connect with OTClient → localhost:7171"
